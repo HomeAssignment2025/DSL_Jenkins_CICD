@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-api
+  namespace: ci-cd-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-api
+  template:
+    metadata:
+      labels:
+        app: flask-api
+    spec:
+      containers:
+        - name: flask-api
+          image: youruser/flask-docker-api:latest 
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: flask-storage
+              mountPath: /data
+            - name: docker-sock
+              mountPath: /var/run/docker.sock
+          livenessProbe:
+            httpGet:
+              path: /api/containers
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /api/containers
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: flask-storage
+          emptyDir: {}
+        - name: docker-sock
+          hostPath:
+            path: /var/run/docker.sock
+            type: Socket

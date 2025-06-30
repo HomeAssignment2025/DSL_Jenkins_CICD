@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'DOCKER_IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
+        string(name: 'DOCKER_IMAGE_NAME', defaultValue: 'nginx-proxy', description: 'Docker image name')
+        string(name: 'DOCKERHUB_USER', defaultValue: 'youruser', description: 'DockerHub username')
+    }
+
+    environment {
+        IMAGE_NAME = "${params.DOCKERHUB_USER}/${params.DOCKER_IMAGE_NAME}:${params.DOCKER_IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${env.IMAGE_NAME}", ".")
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                withDockerRegistry(credentialsId: 'dockerhub-creds', url: '') {
+                    script {
+                        docker.image("${env.IMAGE_NAME}").push()
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Nginx proxy image pushed: ${env.IMAGE_NAME}"
+        }
+        failure {
+            echo "❌ Build failed for ${env.IMAGE_NAME}"
+        }
+    }
+}
+

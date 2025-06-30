@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-proxy
+  namespace: ci-cd-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-proxy
+  template:
+    metadata:
+      labels:
+        app: nginx-proxy
+    spec:
+      containers:
+        - name: nginx-proxy
+          image: youruser/nginx-proxy:latest  # Replace with your image
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /api/containers
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /api/containers
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
