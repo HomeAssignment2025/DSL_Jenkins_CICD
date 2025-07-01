@@ -6,7 +6,7 @@ It builds and tests a Flask application that interacts with Docker, wraps it in 
 ---
 
 ## 🧱 Project Structure
-
+```
 ci-cd-assignment/
 ├── job-dsl/ # Jenkins Job DSL Groovy script
 ├── flask-api/ # Flask app, Dockerfile, Jenkinsfile
@@ -17,7 +17,7 @@ ci-cd-assignment/
 ├── terraform/ # (Optional) infra-as-code
 ├── README.md # This file
 └── .gitignore
-
+```
 
 ---
 
