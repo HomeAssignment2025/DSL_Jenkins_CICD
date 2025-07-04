@@ -1,12 +1,7 @@
-// This Groovy DSL script creates three Jenkins pipeline jobs.
-// Each job uses a Jenkinsfile stored in the repository.
-
-// Common defaults
-def defaultRepo = 'https://github.com/youruser/ci-cd-assignment.git'  // Replace with your actual repo
+def defaultRepo = 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git'
 def defaultBranch = '*/main'
 def defaultTag = 'latest'
 
-// List of job definitions
 def pipelineJobs = [
     [
         name: 'build-python-api',
@@ -25,7 +20,6 @@ def pipelineJobs = [
     ]
 ]
 
-// Loop to define each pipeline job
 pipelineJobs.each { jobDef ->
     pipelineJob(jobDef.name) {
         description(jobDef.description)
@@ -54,12 +48,7 @@ pipelineJobs.each { jobDef ->
             numToKeep(25)
         }
 
-        properties {
-            pipelineTriggers {
-                scm('H/5 * * * *') // optional: poll every 5 minutes
-            }
-        }
-
+        // Removed properties { pipelineTriggers { scm(...) } } to avoid Job DSL error
         disabled(false)
     }
 }
