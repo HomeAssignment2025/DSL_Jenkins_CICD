@@ -71,7 +71,6 @@ helm upgrade --install keda kedacore/keda \
   --wait
 echo "✅ KEDA is ready."
 
-
 # --- Final Instructions ---
 echo "🎉 All components installed successfully!"
 echo "🔑 Your ArgoCD initial admin password is:"
