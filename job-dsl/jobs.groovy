@@ -1,106 +1,163 @@
-pipeline {
-    agent any
+def defaultRepo = 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git'
+def defaultBranch = '*/main'
+def defaultTag = 'latest'
 
-    environment {
-        DEFAULT_REPO = 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git'
-        DEFAULT_BRANCH = '*/main'
-        DEFAULT_TAG = 'latest'
-    }
+def pipelineJobs = [
+    [
+        name: 'build-python-api',
+        description: 'Builds and pushes the Flask Docker image',
+        scriptPath: 'flask-api/Jenkinsfile'
+    ],
+    [
+        name: 'build-nginx-proxy',
+        description: 'Builds and pushes the Nginx reverse proxy image',
+        scriptPath: 'nginx-proxy/Jenkinsfile'
+    ],
+    [
+        name: 'run-local-containers',
+        description: 'Runs both containers and verifies proxy -> Flask communication',
+        scriptPath: 'runner-job/Jenkinsfile'
+    ]
+]
 
-    stages {
-        stage('Code Checkout') {
-            steps {
-                echo '[INFO] Checking out DSL seed repository...'
-                checkout scm
-            }
+pipelineJobs.each { jobDef ->
+    pipelineJob(jobDef.name) {
+        description(jobDef.description)
+
+        parameters {
+            stringParam('BRANCH_NAME', defaultBranch, 'Git branch to build')
+            stringParam('DOCKER_IMAGE_TAG', defaultTag, 'Docker image tag')
         }
 
-        stage('Static Code Analysis') {
-            steps {
-                echo '[INFO] Running static code analysis (placeholder)...'
-                // In the future, integrate tools like SonarQube, Checkstyle, etc.
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                echo '[INFO] Running unit tests for DSL scripts (placeholder)...'
-                // Later, add Groovy class validation or DSL verification here
-            }
-        }
-
-        stage('Generate Pipeline Jobs') {
-            steps {
-                echo '[INFO] Generating Jenkins pipeline jobs using Job DSL...'
-                script {
-                    def pipelineJobs = [
-                        [
-                            name: 'build-python-api',
-                            description: 'Builds and pushes the Flask Docker image',
-                            scriptPath: 'flask-api/Jenkinsfile'
-                        ],
-                        [
-                            name: 'build-nginx-proxy',
-                            description: 'Builds and pushes the Nginx reverse proxy image',
-                            scriptPath: 'nginx-proxy/Jenkinsfile'
-                        ],
-                        [
-                            name: 'run-local-containers',
-                            description: 'Runs both containers and verifies proxy -> Flask communication',
-                            scriptPath: 'runner-job/Jenkinsfile'
-                        ]
-                    ]
-
-                    pipelineJobs.each { jobDef ->
-                        jobDsl scriptText: """
-                            pipelineJob('${jobDef.name}') {
-                                description('${jobDef.description}')
-                                parameters {
-                                    stringParam('BRANCH_NAME', '${DEFAULT_BRANCH}', 'Git branch to build')
-                                    stringParam('DOCKER_IMAGE_TAG', '${DEFAULT_TAG}', 'Docker image tag')
-                                }
-                                definition {
-                                    cpsScm {
-                                        scm {
-                                            git {
-                                                remote {
-                                                    url('${DEFAULT_REPO}')
-                                                }
-                                                branches('\$BRANCH_NAME')
-                                            }
-                                        }
-                                        scriptPath('${jobDef.scriptPath}')
-                                    }
-                                }
-                                logRotator {
-                                    daysToKeep(14)
-                                    numToKeep(25)
-                                }
-                                disabled(false)
-                            }
-                        """
+        definition {
+            cpsScm {
+                scm {
+                    git {
+                        remote {
+                            url(defaultRepo)
+                        }
+                        branches('$BRANCH_NAME')
                     }
                 }
+                scriptPath(jobDef.scriptPath)
             }
         }
 
-        stage('Teardown') {
-            steps {
-                echo '[INFO] Performing cleanup and final reporting (placeholder)...'
-                // Add artifact cleanup or reporting tools if needed
-            }
+        logRotator {
+            daysToKeep(14)
+            numToKeep(25)
         }
-    }
 
-    post {
-        success {
-            echo '[SUCCESS] All seed job stages completed successfully.'
-        }
-        failure {
-            echo '[FAILURE] One or more seed job stages failed.'
-        }
+        disabled(false)
     }
 }
+
+
+
+
+// pipeline {
+//     agent any
+
+//     environment {
+//         DEFAULT_REPO = 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git'
+//         DEFAULT_BRANCH = '*/main'
+//         DEFAULT_TAG = 'latest'
+//     }
+
+//     stages {
+//         stage('Code Checkout') {
+//             steps {
+//                 echo '[INFO] Checking out DSL seed repository...'
+//                 checkout scm
+//             }
+//         }
+
+//         stage('Static Code Analysis') {
+//             steps {
+//                 echo '[INFO] Running static code analysis (placeholder)...'
+//                 // In the future, integrate tools like SonarQube, Checkstyle, etc.
+//             }
+//         }
+
+//         stage('Unit Tests') {
+//             steps {
+//                 echo '[INFO] Running unit tests for DSL scripts (placeholder)...'
+//                 // Later, add Groovy class validation or DSL verification here
+//             }
+//         }
+
+//         stage('Generate Pipeline Jobs') {
+//             steps {
+//                 echo '[INFO] Generating Jenkins pipeline jobs using Job DSL...'
+//                 script {
+//                     def pipelineJobs = [
+//                         [
+//                             name: 'build-python-api',
+//                             description: 'Builds and pushes the Flask Docker image',
+//                             scriptPath: 'flask-api/Jenkinsfile'
+//                         ],
+//                         [
+//                             name: 'build-nginx-proxy',
+//                             description: 'Builds and pushes the Nginx reverse proxy image',
+//                             scriptPath: 'nginx-proxy/Jenkinsfile'
+//                         ],
+//                         [
+//                             name: 'run-local-containers',
+//                             description: 'Runs both containers and verifies proxy -> Flask communication',
+//                             scriptPath: 'runner-job/Jenkinsfile'
+//                         ]
+//                     ]
+
+//                     pipelineJobs.each { jobDef ->
+//                         jobDsl scriptText: """
+//                             pipelineJob('${jobDef.name}') {
+//                                 description('${jobDef.description}')
+//                                 parameters {
+//                                     stringParam('BRANCH_NAME', '${DEFAULT_BRANCH}', 'Git branch to build')
+//                                     stringParam('DOCKER_IMAGE_TAG', '${DEFAULT_TAG}', 'Docker image tag')
+//                                 }
+//                                 definition {
+//                                     cpsScm {
+//                                         scm {
+//                                             git {
+//                                                 remote {
+//                                                     url('${DEFAULT_REPO}')
+//                                                 }
+//                                                 branches('\$BRANCH_NAME')
+//                                             }
+//                                         }
+//                                         scriptPath('${jobDef.scriptPath}')
+//                                     }
+//                                 }
+//                                 logRotator {
+//                                     daysToKeep(14)
+//                                     numToKeep(25)
+//                                 }
+//                                 disabled(false)
+//                             }
+//                         """
+//                     }
+//                 }
+//             }
+//         }
+
+//         stage('Teardown') {
+//             steps {
+//                 echo '[INFO] Performing cleanup and final reporting (placeholder)...'
+//                 // Add artifact cleanup or reporting tools if needed
+//             }
+//         }
+//     }
+
+//     post {
+//         success {
+//             echo '[SUCCESS] All seed job stages completed successfully.'
+//         }
+//         failure {
+//             echo '[FAILURE] One or more seed job stages failed.'
+//         }
+//     }
+// }
 
 
 // def defaultRepo = 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git'
