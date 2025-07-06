@@ -1,53 +1,214 @@
-// ToDO
-// Check  - Docker daemon 
-// SET - Docker Hub credentials с ID: dockerhub-creds
-
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: docker
+    image: docker:24.0.2-dind
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: docker-graph-storage
+      mountPath: /var/lib/docker
+  volumes:
+  - name: docker-graph-storage
+    emptyDir: {}
+"""
+            defaultContainer 'docker'
+        }
+    }
 
     parameters {
-        string(name: 'DOCKER_IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
-        string(name: 'DOCKER_IMAGE_NAME', defaultValue: 'flask-docker-api', description: 'Image name')
-        string(name: 'DOCKERHUB_USER', defaultValue: 'youruser', description: 'DockerHub username')
+        string(name: 'GIT_REPO', defaultValue: 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git', description: 'Git repository with the Flask app')
+        string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch to use')
+        string(name: 'IMAGE_TAG', defaultValue: 'flask-api:latest', description: 'Image tag for the built container')
     }
 
     environment {
-        IMAGE_NAME = "${params.DOCKERHUB_USER}/${params.DOCKER_IMAGE_NAME}:${params.DOCKER_IMAGE_TAG}"
+        APP_DIR = 'flask-api'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repo') {
             steps {
-                checkout scm
+                sh """
+                  apk add git --no-cache
+                  git clone --branch ${params.GIT_BRANCH} ${params.GIT_REPO} src
+                  ls -la src
+                """
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Flask App Image') {
             steps {
-                script {
-                    docker.build("${env.IMAGE_NAME}", ".")
+                dir('src/flask-api') {
+                    sh """
+                      echo '[INFO] Building Flask app Docker image...'
+                      docker build -t ${params.IMAGE_TAG} .
+                      docker images
+                    """
                 }
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Save Docker Image Locally') {
             steps {
-                withDockerRegistry(credentialsId: 'dockerhub-creds', url: '') {
-                    script {
-                        docker.image("${env.IMAGE_NAME}").push()
-                    }
-                }
+                sh """
+                  echo '[INFO] Saving Docker image as artifact...'
+                  docker save ${params.IMAGE_TAG} | gzip > flask-api-image.tar.gz
+                """
+                archiveArtifacts artifacts: 'flask-api-image.tar.gz', fingerprint: true
             }
         }
     }
 
     post {
         success {
-            echo "✅ Flask image pushed: ${env.IMAGE_NAME}"
+            echo "[SUCCESS] Flask app built and image saved: ${params.IMAGE_TAG}"
         }
         failure {
-            echo "❌ Build failed for ${env.IMAGE_NAME}"
+            echo "[FAILURE] Failed to build Flask app"
         }
     }
 }
+
+
+
+// pipeline {
+//     agent {
+//         kubernetes {
+//             label 'jenkins-docker-agent'
+//             defaultContainer 'jnlp'
+//             yaml """
+// apiVersion: v1
+// kind: Pod
+// spec:
+//   containers:
+//   - name: docker
+//     image: docker:24.0.2
+//     command:
+//     - cat
+//     tty: true
+//     volumeMounts:
+//     - name: docker-sock
+//       mountPath: /var/run/docker.sock
+//   volumes:
+//   - name: docker-sock
+//     hostPath:
+//       path: /var/run/docker.sock
+// """
+//         }
+//     }
+
+//     parameters {
+//         string(name: 'GIT_REPO', defaultValue: 'https://github.com/HomeAssignment2025/DSL_Jenkins_CICD.git', description: 'Git repository URL')
+//         string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'Git branch')
+//         string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Image tag')
+//     }
+
+//     environment {
+//         IMAGE_NAME = "flask-api"
+//         FULL_IMAGE = "${IMAGE_NAME}:${params.IMAGE_TAG}"
+//         ARTIFACT_FILE = "${IMAGE_NAME}_${params.IMAGE_TAG}.tar"
+//     }
+
+//     stages {
+//         stage('Checkout') {
+//             steps {
+//                 echo "[INFO] Cloning code from ${params.GIT_REPO} (${params.GIT_BRANCH})"
+//                 git branch: params.GIT_BRANCH, url: params.GIT_REPO
+//             }
+//         }
+
+//         stage('Build Docker Image') {
+//             steps {
+//                 container('docker') {
+//                     sh 'docker version'
+//                     sh "docker build -t ${FULL_IMAGE} ./flask-api"
+//                 }
+//             }
+//         }
+
+//         stage('Save Docker Image as Artifact') {
+//             steps {
+//                 container('docker') {
+//                     sh "docker save -o ${ARTIFACT_FILE} ${FULL_IMAGE}"
+//                 }
+//             }
+//         }
+
+//         stage('Archive Docker Image') {
+//             steps {
+//                 archiveArtifacts artifacts: "${ARTIFACT_FILE}", fingerprint: true
+//             }
+//         }
+//     }
+
+//     post {
+//         success {
+//             echo "✅ Successfully built and saved ${FULL_IMAGE}"
+//         }
+//         failure {
+//             echo "❌ Failed to build/save ${FULL_IMAGE}"
+//         }
+//     }
+// }
+
+
+
+// // // ToDO
+// // // Check  - Docker daemon 
+// // // SET - Docker Hub credentials с ID: dockerhub-creds
+
+// // pipeline {
+// //     agent any
+
+// //     parameters {
+// //         string(name: 'DOCKER_IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag')
+// //         string(name: 'DOCKER_IMAGE_NAME', defaultValue: 'flask-docker-api', description: 'Image name')
+// //         string(name: 'DOCKERHUB_USER', defaultValue: 'youruser', description: 'DockerHub username')
+// //     }
+
+// //     environment {
+// //         IMAGE_NAME = "${params.DOCKERHUB_USER}/${params.DOCKER_IMAGE_NAME}:${params.DOCKER_IMAGE_TAG}"
+// //     }
+
+// //     stages {
+// //         stage('Checkout') {
+// //             steps {
+// //                 checkout scm
+// //             }
+// //         }
+
+// //         stage('Build Docker Image') {
+// //             steps {
+// //                 script {
+// //                     docker.build("${env.IMAGE_NAME}", ".")
+// //                 }
+// //             }
+// //         }
+
+// //         stage('Push to Docker Hub') {
+// //             steps {
+// //                 withDockerRegistry(credentialsId: 'dockerhub-creds', url: '') {
+// //                     script {
+// //                         docker.image("${env.IMAGE_NAME}").push()
+// //                     }
+// //                 }
+// //             }
+// //         }
+// //     }
+
+// //     post {
+// //         success {
+// //             echo "✅ Flask image pushed: ${env.IMAGE_NAME}"
+// //         }
+// //         failure {
+// //             echo "❌ Build failed for ${env.IMAGE_NAME}"
+// //         }
+// //     }
+// // }
 
