@@ -67,10 +67,22 @@ kubectl apply -f k8s/namespace.yaml
 k8s/keda-install.sh
 
 4. Deploy Application
+```bash
+# Option 1: Deploy all resources at once
+./scripts/deploy-all.sh
+
+# Option 2: Deploy manually (in order)
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/resource-quota.yaml
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/flask-service.yaml
+kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/flask-deployment.yaml
 kubectl apply -f k8s/nginx-deployment.yaml
-kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/network-policy.yaml
 kubectl apply -f k8s/keda-scaledobject.yaml
+```
 
 5. Port Forward and Test
 scripts/port-forward.sh
@@ -92,6 +104,16 @@ Clean up everything automatically
 Jenkins with Docker and Job DSL Plugin
 Docker Hub credentials in Jenkins (ID: dockerhub-creds)
 docker, kubectl, jq, curl installed
+
+🛡️ Security Features
+- Non-root containers with security contexts
+- Network policies for pod-to-pod communication
+- RBAC with minimal required permissions
+- Resource quotas and limits
+- Health checks and monitoring
+- ConfigMaps and Secrets for configuration management
+
+⚠️ Important: Docker socket access is disabled by default for security. See SECURITY.md for details.
 
 📦 Optional: Terraform
 A terraform/ folder is prepared for possible future automation of:
